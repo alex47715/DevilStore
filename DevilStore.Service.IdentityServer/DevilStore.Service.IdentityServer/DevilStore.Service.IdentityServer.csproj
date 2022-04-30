@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\DevilStore.IdentityServer.Flow\DevilStore.IdentityServer.Flow.csproj" />
+    <ProjectReference Include="..\DevilStore.IdentityServer.Auth\DevilStore.IdentityServer.Auth.csproj" />
   </ItemGroup>
 
 </Project>

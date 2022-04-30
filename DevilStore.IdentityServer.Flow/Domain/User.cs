@@ -12,13 +12,14 @@ namespace DevilStore.IdentityServer.Flow.Domain
         public Roles role { get; set; }
         public string? telegramLogin { get; set; }
         public decimal balance { get; set; } = 0;
-        public bool telegramVerified { get; set; }
-        public bool telegramLastChange { get; set; }
-        public DateTime registrationDate { get; set; }
-        public string lastOnline { get; set; }
-        public string txtStatus { get; set; }
-        public string profileImage { get; set; }
-        public string referal { get; set; }
+        public bool telegramVerified { get; set; } = false;
+        public DateTime? telegramLastChange { get; set; } = null;
+        public string? userFingerPrints { get; set; }
+        public DateTime? registrationDate { get; set; } = DateTime.Now;
+        public DateTime? lastOnline { get; set; } = null;
+        public string? txtStatus { get; set; } = null;
+        public string? profileImage { get; set; } = null;
+        public string? referal { get; set; } = null ;
 
         public User(string username, string publicLogin, string password, Roles role, string? telegramLogin = null)
         {

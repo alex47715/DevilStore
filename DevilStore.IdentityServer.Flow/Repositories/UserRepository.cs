@@ -1,5 +1,6 @@
 ﻿using DevilStore.IdentityServer.Flow.Data;
 using DevilStore.IdentityServer.Flow.Domain;
+using DevilStore.Service.IdentityServer.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevilStore.IdentityServer.Flow.Repositories
@@ -7,7 +8,7 @@ namespace DevilStore.IdentityServer.Flow.Repositories
     public interface IUserRepository
     {
         public Task<User> SignUp(User user);
-        public Task<User?> SignIn(User user);
+        public Task<User?> SignIn(SignInRequestModel user);
         public Task<User?> VerifyUsername(string username);
         public Task<User?> VerifyPublicLogin(string publicLogin);
     }
@@ -27,9 +28,14 @@ namespace DevilStore.IdentityServer.Flow.Repositories
             return result.Entity;
         }
 
-        public async Task<User?> SignIn(User user)
+        public async Task<User?> SignIn(SignInRequestModel user)
         {
             var result = await _devilDBContext.User.FirstOrDefaultAsync(x => x.username == user.username && x.password == user.password);
+            if (result==null)
+                return null;
+            result.lastOnline = DateTime.Now;
+            _devilDBContext?.User.Update(result);
+            await _devilDBContext.SaveChangesAsync();
             return result;
         }
 

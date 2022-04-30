@@ -1,6 +1,8 @@
-﻿using DevilStore.IdentityServer.Flow.Domain;
+﻿using DevilStore.IdentityServer.Flow.Constants;
+using DevilStore.IdentityServer.Flow.Domain;
 using DevilStore.IdentityServer.Flow.Model;
 using DevilStore.IdentityServer.Flow.Repositories;
+using DevilStore.Service.IdentityServer.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +14,7 @@ namespace DevilStore.IdentityServer.Flow.Managers
     public interface IUserManager
     {
         public Task<User> SignUp(UserModel user);
-        public Task<User?> SignIn(UserModel user);
+        public Task<User?> SignIn(SignInRequestModel user);
         public Task<User?> VerifyUsername(string username);
         public Task<User> VerifyPublicLogin(string publicLogin);
 
@@ -31,27 +33,35 @@ namespace DevilStore.IdentityServer.Flow.Managers
             User result;
 
             if (user.telegramLogin == null)
-                result = await _userRepository.SignUp(new User(user.username, user.publicLogin, user.password, user.role)) ?? throw new Exception("SignUp failed");
+                result = await _userRepository.SignUp(new User(user.username, user.publicLogin, user.password, user.role)) ?? throw new InvalidDataException("SignUp failed");
 
-            result = await _userRepository.SignUp(new User(user.username, user.publicLogin, user.password, user.role, user.telegramLogin)) ?? throw new Exception("SignUp failed");
+            result = await _userRepository.SignUp(new User(user.username, user.publicLogin, user.password, user.role, user.telegramLogin)) ?? throw new InvalidDataException("SignUp failed");
             return result;
         }
 
-        public async Task<User?> SignIn(UserModel user)
+        public async Task<User?> SignIn(SignInRequestModel user)
         {
-            var result = await _userRepository.SignIn(new User(user.username, user.publicLogin, user.password, user.role, user.telegramLogin)) ?? throw new Exception("SignIn failed");
+            var result = await _userRepository.SignIn(user) ?? throw new UnauthorizedAccessException("SignIn failed");
             return result;
         }
 
         public async Task<User?> VerifyUsername(string username)
         {
-            var result = await _userRepository.VerifyUsername(username) ?? throw new Exception("Chouse another username");
+            var result = await _userRepository.VerifyUsername(username);
+
+            if (result!=null)
+                throw new InvalidDataException("Chouse another username");
+
             return result;
         }
 
         public async Task<User> VerifyPublicLogin(string publicLogin)
         {
-            var result = await _userRepository.VerifyPublicLogin(publicLogin) ?? throw new Exception("Chouse another login");
+            var result = await _userRepository.VerifyPublicLogin(publicLogin);
+
+            if (result != null)
+                throw new InvalidDataException("Chouse another login");
+
             return result;
         }
 
