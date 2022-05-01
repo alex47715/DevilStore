@@ -1,4 +1,5 @@
-﻿using DevilStore.IdentityServer.Flow.Data;
+﻿using DevilStore.IdentityServer.Flow.Constants;
+using DevilStore.IdentityServer.Flow.Data;
 using DevilStore.IdentityServer.Flow.Domain;
 using DevilStore.Service.IdentityServer.Model;
 using Microsoft.EntityFrameworkCore;
@@ -30,9 +31,16 @@ namespace DevilStore.IdentityServer.Flow.Repositories
 
         public async Task<User?> SignIn(SignInRequestModel user)
         {
-            var result = await _devilDBContext.User.FirstOrDefaultAsync(x => x.username == user.username && x.password == user.password);
-            if (result==null)
+            var result = await _devilDBContext.User.FirstOrDefaultAsync(x => x.username == user.username);
+
+            if (result == null)
                 return null;
+
+            if (result.password != user.password)
+            {
+                return new User() { password = "invalid"};
+            }
+                
             result.lastOnline = DateTime.Now;
             _devilDBContext?.User.Update(result);
             await _devilDBContext.SaveChangesAsync();

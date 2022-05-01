@@ -11,8 +11,10 @@ namespace DevilStore.IdentityServer.Flow
         {
 
             services.AddTransient<IUserRepository, UserRepository>();
+            services.AddTransient<IActivityRepository, ActivityRepository>();
 
             services.AddTransient<IUserManager, UserManager>();
+            services.AddTransient<IActivityManager, ActivityManager>();
 
             return services;
         }

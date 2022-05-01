@@ -1,4 +1,5 @@
-﻿using DevilStore.IdentityServer.Flow;
+﻿using DevilStore.IdentityServer.Auth;
+using DevilStore.IdentityServer.Flow;
 using DevilStore.IdentityServer.Flow.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -31,6 +32,7 @@ namespace DevilStore.Service.IdentityServer
                 options.UseSqlServer(connection));
 
             services.AddIndentityFlow(Configuration);
+            services.AddAuth(Configuration);
 
 
 
@@ -54,7 +56,7 @@ namespace DevilStore.Service.IdentityServer
             app.UseRouting();
 
             // security - Order Matters !!!
-            //app.UseAuthentication();
+            app.UseAuthentication();
             //app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

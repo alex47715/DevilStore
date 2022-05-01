@@ -6,6 +6,7 @@ namespace DevilStore.IdentityServer.Flow.Domain
     public class User
     {
         [Key]
+        public int id { get; set; }
         public string username { get; set; }
         public string publicLogin { get; set; }
         public string password { get; set; }
@@ -28,6 +29,9 @@ namespace DevilStore.IdentityServer.Flow.Domain
             this.password = password;
             this.role = role;
             this.telegramLogin = telegramLogin;
+        }
+        public User()
+        {
         }
     }
 }

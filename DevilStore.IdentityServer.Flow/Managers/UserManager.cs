@@ -48,10 +48,6 @@ namespace DevilStore.IdentityServer.Flow.Managers
         public async Task<User?> VerifyUsername(string username)
         {
             var result = await _userRepository.VerifyUsername(username);
-
-            if (result!=null)
-                throw new InvalidDataException("Chouse another username");
-
             return result;
         }
 

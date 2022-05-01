@@ -1,9 +1,9 @@
 ﻿using DevilStore.IdentityServer.Auth.Configurations;
+using DevilStore.IdentityServer.Flow.Constants;
 using DevilStore.IdentityServer.Flow.Domain;
 using DevilStore.IdentityServer.Flow.Managers;
 using DevilStore.IdentityServer.Flow.Model;
 using DevilStore.Service.IdentityServer.Model;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -17,16 +17,27 @@ namespace DevilStore.Service.IdentityServer.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserManager _userManager;
+        private readonly IActivityManager _activityManager;
 
-        public UserController(IUserManager userManager)
+        public UserController(IUserManager userManager, IActivityManager activityManager)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+            _activityManager = activityManager ?? throw new ArgumentNullException(nameof(activityManager));
         }
 
         [HttpPost("signin")]
         public async Task<ActionResult> SignIn([FromBody] SignInRequestModel user)
         {
             var result = await _userManager.SignIn(user);
+
+            if (result.password == "invalid")
+            {
+                await _activityManager.LogUserActivity(result.id, UserActions.incorrectPass, true, DateTime.Now);
+                return BadRequest("Invalid password");
+            }
+                
+
+            await _activityManager.LogUserActivity(result.id, UserActions.successLogin, true, DateTime.Now);
 
             var identity = GetIdentity(result);
             var now = DateTime.UtcNow;
@@ -44,7 +55,11 @@ namespace DevilStore.Service.IdentityServer.Controllers
             {
                 jwt = encodedJwt,
                 username = result.username,
-                role = result.role
+                role = result.role,
+                publicLogin = result.publicLogin,
+                balance = result.balance,
+                registrationDate = result.registrationDate,
+                txtStatus = result.txtStatus
             });
         }
 
@@ -65,57 +80,15 @@ namespace DevilStore.Service.IdentityServer.Controllers
         [HttpGet("verify/jwt")]
         public async Task<IActionResult> JwtVerify()
         {
-            var authHeader = HttpContext?.Request?.Headers?.SingleOrDefault(x => x.Key == "Authorization").Value[0];
-            var jwt = authHeader.Substring(authHeader.IndexOf(' ') + 1);
-            var validationParameters = new TokenValidationParameters()
-            {
-                ValidateIssuer = true,
-                // строка, представляющая издателя
-                ValidIssuer = AuthOptions.ISSUER,
-
-                // будет ли валидироваться потребитель токена
-                ValidateAudience = true,
-                // установка потребителя токена
-                ValidAudience = AuthOptions.AUDIENCE,
-                // будет ли валидироваться время существования
-                ValidateLifetime = true,
-
-                // установка ключа безопасности
-                IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
-                // валидация ключа безопасности
-                ValidateIssuerSigningKey = true,
-
-            };
-
-            var handler = new JwtSecurityTokenHandler();
-
-            var principal = handler.ValidateToken(jwt, validationParameters, out var validToken);
-            JwtSecurityToken validJwt = validToken as JwtSecurityToken;
-
-            if (validJwt == null)
-            {
-                throw new UnauthorizedAccessException("Invalid JWT");
-            }
-
-            if (!validJwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.Ordinal))
-            {
-                throw new UnauthorizedAccessException("Invalid JWT");
-            }
-
-            var username = GetClaim(jwt, ClaimsIdentity.DefaultNameClaimType);
-            var role = GetClaim(jwt, ClaimsIdentity.DefaultRoleClaimType);
-
-            return Ok(new
-            {
-                username = username,
-                role = role
-            });
+            return Ok(VerifyJWT(HttpContext));
         }
-
-        [HttpGet("verify/username")]
-        public async Task<IActionResult> VerifyUsername([FromQuery]string username)
+        [HttpGet("verify/username/{username}")]
+        public async Task<IActionResult> VerifyUsername([FromRoute]string username)
         {
+            var jwt = VerifyJWT(HttpContext);
             var result = await _userManager.VerifyUsername(username);
+            if (result != null)
+                return BadRequest("Chouse another username");
             return Ok(new
             {
                 username = username
@@ -125,6 +98,7 @@ namespace DevilStore.Service.IdentityServer.Controllers
         [HttpGet("verify/login")]
         public async Task<IActionResult> VerifyPublicLogin([FromQuery] string publicLogin)
         {
+            var jwt = VerifyJWT(HttpContext);
             var result = await _userManager.VerifyPublicLogin(publicLogin);
             return Ok(new
             {
@@ -151,6 +125,52 @@ namespace DevilStore.Service.IdentityServer.Controllers
             var securityToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
             var stringClaimValue = securityToken.Claims.First(claim => claim.Type == claimType).Value;
             return stringClaimValue;
+        }
+        private Object VerifyJWT(HttpContext httpContext)
+        {
+            var authHeader = httpContext?.Request?.Headers?.SingleOrDefault(x => x.Key == "Authorization").Value[0];
+            var jwt = authHeader.Substring(authHeader.IndexOf(' ') + 1);
+
+            var validationParameters = new TokenValidationParameters()
+            {
+                ValidateIssuer = true,
+                // строка, представляющая издателя
+                ValidIssuer = AuthOptions.ISSUER,
+                // будет ли валидироваться потребитель токена
+                ValidateAudience = true,
+                // установка потребителя токена
+                ValidAudience = AuthOptions.AUDIENCE,
+                // будет ли валидироваться время существования
+                ValidateLifetime = true,
+                // установка ключа безопасности
+                IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
+                // валидация ключа безопасности
+                ValidateIssuerSigningKey = true,
+            };
+
+            var handler = new JwtSecurityTokenHandler();
+
+            var principal = handler.ValidateToken(jwt, validationParameters, out var validToken);
+            JwtSecurityToken validJwt = validToken as JwtSecurityToken;
+
+            if (validJwt == null)
+            {
+                throw new UnauthorizedAccessException("Invalid JWT");
+            }
+
+            if (!validJwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.Ordinal))
+            {
+                throw new UnauthorizedAccessException("Invalid JWT");
+            }
+
+            var username = GetClaim(jwt, ClaimsIdentity.DefaultNameClaimType);
+            var role = GetClaim(jwt, ClaimsIdentity.DefaultRoleClaimType);
+
+            return new
+            {
+                username = username,
+                role = role
+            };
         }
     }
 }
