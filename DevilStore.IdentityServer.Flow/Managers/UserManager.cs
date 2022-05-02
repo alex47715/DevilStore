@@ -17,6 +17,7 @@ namespace DevilStore.IdentityServer.Flow.Managers
         public Task<User?> SignIn(SignInRequestModel user);
         public Task<User?> VerifyUsername(string username);
         public Task<User> VerifyPublicLogin(string publicLogin);
+        public Task ChangePassword(int id, string password);
 
     }
     public class UserManager : IUserManager
@@ -59,6 +60,13 @@ namespace DevilStore.IdentityServer.Flow.Managers
                 throw new InvalidDataException("Chouse another login");
 
             return result;
+        }
+
+        public async Task ChangePassword(int id, string password)
+        {
+            var result = await _userRepository.ChangePassword(id, password);
+            if (result == null)
+                throw new InvalidDataException("Password wasn't changed");
         }
 
     }

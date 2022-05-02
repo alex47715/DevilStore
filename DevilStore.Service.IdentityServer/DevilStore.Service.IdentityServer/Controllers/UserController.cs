@@ -54,27 +54,25 @@ namespace DevilStore.Service.IdentityServer.Controllers
             return Ok(new
             {
                 jwt = encodedJwt,
+                id = result.id,
                 username = result.username,
                 role = result.role,
                 publicLogin = result.publicLogin,
                 balance = result.balance,
                 registrationDate = result.registrationDate,
-                txtStatus = result.txtStatus
+                txtStatus = result.txtStatus,
+                profileImage = "https://i.pinimg.com/736x/bb/f0/22/bbf022bb0f60526e32bfa4555c517c39.jpg"
             });
         }
 
         [HttpPost("signup")]
-        public async Task<UserModel> SignUp([FromBody] UserModel user)
+        public async Task<IActionResult> SignUp([FromBody] UserModel user)
         {
             var result = await _userManager.SignUp(user);
-            return new UserModel()
-            {
-                username = result.username,
-                password = result.password,
-                publicLogin = result.publicLogin,
-                role = result.role,
-                telegramLogin = result.telegramLogin
-            };
+            if (result != null)
+                return Ok("Sign up success");
+            return BadRequest("Sign up failed");
+            
         }
 
         [HttpGet("verify/jwt")]
@@ -106,11 +104,18 @@ namespace DevilStore.Service.IdentityServer.Controllers
             });
         }
 
+        [HttpPost("change/password")]
+        public async Task<IActionResult> ChangePassword([FromBody]ChangePasswordRequestModel model)
+        {
+            await _userManager.ChangePassword(model.id, model.Password);
+            return Ok("Password was changed");
+        }
+
         private ClaimsIdentity GetIdentity(User user)
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimsIdentity.DefaultNameClaimType, user.username),
+                new Claim(ClaimsIdentity.DefaultNameClaimType, user.id.ToString()),
                 new Claim(ClaimsIdentity.DefaultRoleClaimType, user.role.ToString())
             };
             ClaimsIdentity claimsIdentity =
@@ -163,12 +168,12 @@ namespace DevilStore.Service.IdentityServer.Controllers
                 throw new UnauthorizedAccessException("Invalid JWT");
             }
 
-            var username = GetClaim(jwt, ClaimsIdentity.DefaultNameClaimType);
+            var id = GetClaim(jwt, ClaimsIdentity.DefaultNameClaimType);
             var role = GetClaim(jwt, ClaimsIdentity.DefaultRoleClaimType);
 
             return new
             {
-                username = username,
+                id = id,
                 role = role
             };
         }

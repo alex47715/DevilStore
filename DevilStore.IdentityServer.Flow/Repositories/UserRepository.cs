@@ -12,6 +12,7 @@ namespace DevilStore.IdentityServer.Flow.Repositories
         public Task<User?> SignIn(SignInRequestModel user);
         public Task<User?> VerifyUsername(string username);
         public Task<User?> VerifyPublicLogin(string publicLogin);
+        public Task<User?> ChangePassword(int id, string password);
     }
     public class UserRepository : IUserRepository
     {
@@ -56,6 +57,15 @@ namespace DevilStore.IdentityServer.Flow.Repositories
         public async Task<User?> VerifyPublicLogin(string publicLogin)
         {
             var result = await _devilDBContext.User.FirstOrDefaultAsync(x => x.publicLogin == publicLogin);
+            return result;
+        }
+
+        public async Task<User?> ChangePassword(int id, string password)
+        {
+            var result = await _devilDBContext.User.FirstOrDefaultAsync(x => x.id == id);
+            result.password = password;
+            _devilDBContext.User.Update(result);
+            await _devilDBContext.SaveChangesAsync();
             return result;
         }
     }
